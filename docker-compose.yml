@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    environment:
+      FLASK_APP: app
+      FLASK_ENV: development
+      SQLALCHEMY_DATABASE_URI: 'postgresql://postgres:root@db/markr'
+      SQLALCHEMY_TRACK_MODIFICATIONS: 'false'
+
+  db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: markr
+
+#version: '3.8'
+#
+#services:
+#  web:
+#    build: .
+#    ports:
+#      - "5000:5000"
+#    depends_on:
+#      - db
+#    environment:
+#      FLASK_APP: app
+#      FLASK_ENV: development
+#      SQLALCHEMY_DATABASE_URI: 'postgresql://postgres:root@db/markr'
+#      SQLALCHEMY_TRACK_MODIFICATIONS: 'false'
+#    command: ["sh", "-c", "flask db upgrade && flask run --host=0.0.0.0"]
+#
+#  db:
+#    image: postgres:latest
+#    ports:
+#      - "5432:5432"
+#    environment:
+#      POSTGRES_USER: postgres
+#      POSTGRES_PASSWORD: root
+#      POSTGRES_DB: markr
+

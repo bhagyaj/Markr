@@ -1,5 +1,8 @@
-Flask psycopg2-binary
-pytest pytest-cov
+Flask
 Flask-SQLAlchemy
+Flask-Migrate
+psycopg2-binary
+pytest
+pytest-cov
 lxml
 numpy
