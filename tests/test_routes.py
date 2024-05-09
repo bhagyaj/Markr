@@ -1,10 +1,13 @@
+from datetime import datetime
 from unittest.mock import patch
 from flask import Response
 from app.routes import validate_xml
 from lxml.etree import XMLSyntaxError
-from app.routes import import_results, TestResults
+from app.routes import import_results, TestResults, aggregate_results
 import unittest
 from app import create_app, db
+import numpy as np
+import json
 
 class TestRoutes(unittest.TestCase):
 
@@ -122,3 +125,53 @@ class TestRoutes(unittest.TestCase):
             self.assertEqual(imported_record.last_name, 'Bob')
             self.assertEqual(imported_record.available_marks, 20)
             self.assertEqual(imported_record.obtained_marks, 17)
+
+
+    def test_aggregate_results(self):
+        # Define test data
+        test_id = '123'
+        obtained_marks_list = [65, 70, 75, 80, 85]
+
+        # Create sample records in the database
+        with self.app.test_request_context():
+            for i, obtained_mark in enumerate(obtained_marks_list, start=1):
+                new_result = TestResults(first_name='Sample', last_name='Student',
+                                         student_number=f'1234{i}',  # Use unique student numbers
+                                         test_id=test_id,
+                                         available_marks=100, obtained_marks=obtained_mark,
+                                         scanned_on=datetime.now())
+                db.session.add(new_result)
+            db.session.commit()
+
+            # Call the aggregate_results method
+            response = aggregate_results(test_id)
+
+        # Expected results
+        mean = np.mean(obtained_marks_list)
+        stddev = np.std(obtained_marks_list)
+        min_value = np.min(obtained_marks_list)
+        max_value = np.max(obtained_marks_list)
+        p25, p50, p75 = np.percentile(obtained_marks_list, [25, 50, 75])
+        p25_percentage = p25 * 100 / 100  # Assuming available marks is 100
+        p50_percentage = p50 * 100 / 100
+        p75_percentage = p75 * 100 / 100
+
+        expected_response = {
+            'mean': mean,
+            'stddev': stddev,
+            'min': min_value,
+            'max': max_value,
+            'p25': p25_percentage,
+            'p50': p50_percentage,
+            'p75': p75_percentage,
+            'count': len(obtained_marks_list)
+        }
+
+        # Decode bytes to string and parse as JSON
+        response_data = json.loads(response[0].data.decode('utf-8'))
+
+        # Convert response to JSON and compare with expected response
+        self.assertEqual(response_data, expected_response)
+        self.assertEqual(response[1], 200)
+
+
