@@ -12,28 +12,62 @@ import json
 class TestRoutes(unittest.TestCase):
 
     def test_valid_xml(self):
-        # Read the contents of the XML file
+        """
+        Test case to validate XML content using the validate_xml method.
+
+        Steps:
+        1. Read the contents of the XML file named 'sample_results.xml'.
+        2. Call the validate_xml method with the XML content.
+        3. Assert that the result returned by validate_xml is True, indicating that the XML content is valid.
+
+        Returns:
+            None
+        """
+        # Step 1: Read the contents of the XML file
         with open('sample_results.xml', 'rb') as f:
             xml_content = f.read()
 
-        # Call the validate_xml method
+        # Step 2: Call the validate_xml method
         result, _ = validate_xml(xml_content)
 
-        # Assert the result
+        # Step 3: Assert the result
         self.assertTrue(result)
 
     def test_invalid_xml(self):
-        # Pass invalid XML content (empty content)
+        """
+        Test case to check validation of invalid XML content using the validate_xml method.
+
+        Steps:
+        1. Prepare invalid XML content (empty content).
+        2. Call the validate_xml method with the invalid XML content.
+        3. Assert that the result returned by validate_xml is False, indicating that the XML content is invalid.
+
+        Returns:
+            None
+        """
+        # Step 1: Prepare invalid XML content (empty content)
         invalid_xml_content = b''
 
-        # Call the validate_xml method with invalid XML content
+        # Step 2: Call the validate_xml method with invalid XML content
         result, _ = validate_xml(invalid_xml_content)
 
-        # Assert the result
+        # Step 3: Assert the result
         self.assertFalse(result)
 
     def test_missing_fields(self):
-        # Create XML content with missing fields
+        """
+            Test case to validate handling of XML content with missing fields using the validate_xml method.
+
+            Steps:
+            1. Create XML content with missing fields (student-number and test-id).
+            2. Call the validate_xml method with the XML content with missing fields.
+            3. Assert that the result returned by validate_xml is False, indicating missing fields.
+            4. Assert that the errors returned by validate_xml contain the expected message about missing fields.
+
+            Returns:
+                None
+            """
+        # Step 1: Create XML content with missing fields
         xml_content = b"""<?xml version="1.0" encoding="UTF-8" ?>
         <mcq-test-results>
             <mcq-test-result scanned-on="2017-01-01T00:00:00Z">
@@ -44,17 +78,29 @@ class TestRoutes(unittest.TestCase):
             </mcq-test-result>
         </mcq-test-results>"""
 
-        # Call the validate_xml method with XML content with missing fields
+        # Step 2: Call the validate_xml method with XML content with missing fields
         result, errors = validate_xml(xml_content)
 
-        # Assert that the result is False, indicating missing fields
+        # Step 3: Assert that the result is False, indicating missing fields
         self.assertFalse(result)
 
-        # Assert that the error contains the expected message
+        # Step 4: Assert that the error contains the expected message
         self.assertIn({'error': 'Missing fields: student-number, test-id'}, errors)
 
     def test_missing_values(self):
-        # Create XML content with missing values for some fields
+        """
+        Test case to validate handling of XML content with missing values for some fields using the validate_xml method.
+
+        Steps:
+        1. Create XML content with missing values for some fields (first-name and test-id).
+        2. Call the validate_xml method with the XML content with missing values.
+        3. Assert that the result returned by validate_xml is False, indicating missing values.
+        4. Assert that the errors returned by validate_xml contain the expected message about missing values for fields.
+
+        Returns:
+            None
+        """
+        # Step 1: Create XML content with missing values for some fields
         xml_content = b"""<?xml version="1.0" encoding="UTF-8" ?>
         <mcq-test-results>
             <mcq-test-result scanned-on="2017-01-01T00:00:00Z">
@@ -67,28 +113,52 @@ class TestRoutes(unittest.TestCase):
             </mcq-test-result>
         </mcq-test-results>"""
 
-        # Call the validate_xml method with XML content with missing values
+        # Step 2: Call the validate_xml method with XML content with missing values
         result, errors = validate_xml(xml_content)
 
-        # Assert that the result is False, indicating missing values
+        # Step 3: Assert that the result is False, indicating missing values
         self.assertFalse(result)
 
-        # Assert that the error contains the expected message
+        # Step 4: Assert that the error contains the expected message
         self.assertIn({'error': 'Missing values for fields: first-name, test-id'}, errors)
 
     def setUp(self):
-        # Create a Flask application for testing
+        """
+        Set up method to create a Flask application for testing and initialize the database.
+
+        Steps:
+        1. Create a Flask application instance for testing.
+        2. Create a test client for interacting with the Flask application.
+        3. Set up the database within the application context.
+
+        Returns:
+            None
+        """
+        # Step 1: Create a Flask application instance for testing
         self.app = create_app()
+
+        # Step 2: Create a test client for interacting with the Flask application
         self.client = self.app.test_client()
 
-        # Set up the database
+        # Step 3: Set up the database within the application context
         with self.app.app_context():
             db.create_all()
 
     def tearDown(self):
-        # Clean up the database
+        """
+        Tear down method to clean up the database after testing.
+
+        Steps:
+        1. Remove the current database session.
+        2. Drop all tables from the database.
+
+        Returns:
+            None
+        """
+        # Step 1: Remove the current database session
         with self.app.app_context():
             db.session.remove()
+            # Step 2: Drop all tables from the database
             db.drop_all()
 
     def test_import_results(self):
@@ -126,13 +196,28 @@ class TestRoutes(unittest.TestCase):
             self.assertEqual(imported_record.available_marks, 20)
             self.assertEqual(imported_record.obtained_marks, 17)
 
-
     def test_aggregate_results(self):
-        # Define test data
+        """
+        Test case to validate the aggregate_results function.
+
+        This test case ensures that the aggregate_results function correctly calculates aggregate statistics
+        from the database records for a given test ID.
+
+        Steps:
+        1. Define test data including a test ID and a list of obtained marks.
+        2. Create sample records in the database using the defined test data.
+        3. Call the aggregate_results method with the test ID.
+        4. Calculate the expected aggregate statistics based on the test data.
+        5. Parse the response and compare it with the expected aggregate statistics.
+
+        Returns:
+            None
+        """
+        # Step 1: Define test data
         test_id = '123'
         obtained_marks_list = [65, 70, 75, 80, 85]
 
-        # Create sample records in the database
+        # Step 2: Create sample records in the database
         with self.app.test_request_context():
             for i, obtained_mark in enumerate(obtained_marks_list, start=1):
                 new_result = TestResults(first_name='Sample', last_name='Student',
@@ -143,10 +228,10 @@ class TestRoutes(unittest.TestCase):
                 db.session.add(new_result)
             db.session.commit()
 
-            # Call the aggregate_results method
+            # Step 3: Call the aggregate_results method
             response = aggregate_results(test_id)
 
-        # Expected results
+        # Step 4: Calculate the expected aggregate statistics based on the test data
         mean = np.mean(obtained_marks_list)
         stddev = np.std(obtained_marks_list)
         min_value = np.min(obtained_marks_list)
@@ -167,7 +252,7 @@ class TestRoutes(unittest.TestCase):
             'count': len(obtained_marks_list)
         }
 
-        # Decode bytes to string and parse as JSON
+        # Step 5: Parse the response and compare it with the expected aggregate statistics
         response_data = json.loads(response[0].data.decode('utf-8'))
 
         # Convert response to JSON and compare with expected response

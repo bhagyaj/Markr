@@ -1,49 +1,44 @@
+# Docker Compose configuration for Markr application
+
+# Version of the Docker Compose file
 version: '3.8'
 
+# Services defined in the Docker Compose file
 services:
+  # Configuration for the web service
   web:
+    # Build configuration for the web service
     build: .
+    # Ports mapping for the web service
     ports:
       - "5000:5000"
+    # Dependencies of the web service on other services
     depends_on:
       - db
+    # Environment variables for the web service
     environment:
       FLASK_APP: app
       FLASK_ENV: development
       SQLALCHEMY_DATABASE_URI: 'postgresql://postgres:root@db/markr'
       SQLALCHEMY_TRACK_MODIFICATIONS: 'false'
+    # Command to run when starting the web service
+    command: ["sh", "-c", "flask db upgrade && flask run --host=0.0.0.0"]
 
+  # Configuration for the database service
   db:
+    # Docker image used for the database service
     image: postgres:latest
+    # Ports mapping for the database service
     ports:
       - "5432:5432"
+    # Environment variables for the database service
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: root
       POSTGRES_DB: markr
-
-#version: '3.8'
-#
-#services:
-#  web:
-#    build: .
-#    ports:
-#      - "5000:5000"
-#    depends_on:
-#      - db
-#    environment:
-#      FLASK_APP: app
-#      FLASK_ENV: development
-#      SQLALCHEMY_DATABASE_URI: 'postgresql://postgres:root@db/markr'
-#      SQLALCHEMY_TRACK_MODIFICATIONS: 'false'
-#    command: ["sh", "-c", "flask db upgrade && flask run --host=0.0.0.0"]
-#
-#  db:
-#    image: postgres:latest
-#    ports:
-#      - "5432:5432"
-#    environment:
-#      POSTGRES_USER: postgres
-#      POSTGRES_PASSWORD: root
-#      POSTGRES_DB: markr
-
+    # Healthcheck configuration for the database service
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
