@@ -1,6 +1,6 @@
 # app/routes.py
 from datetime import datetime
-
+import logging
 from flask import Blueprint, request, jsonify
 from app import db
 from app.models import TestResults
@@ -10,7 +10,21 @@ import numpy as np
 
 bp = Blueprint('main', __name__)
 
+# Create a logger instance
+logger = logging.getLogger(__name__)
+
+
 def validate_xml(xml_content):
+    """
+        Validate the XML content to ensure it meets the required format.
+
+        Args:
+            xml_content (bytes): The XML content to validate.
+
+        Returns:
+            bool: True if the XML is valid, False otherwise.
+            list: A list of incomplete records if any.
+        """
     try:
         root = etree.parse(BytesIO(xml_content))
         incomplete_records = []
@@ -38,7 +52,8 @@ def validate_xml(xml_content):
                     available = summary_marks.get('available')
                     obtained = summary_marks.get('obtained')
                     if not available or not obtained:
-                        incomplete_records.append({'error': 'Missing or empty available or obtained attributes in summary-marks'})
+                        incomplete_records.append(
+                            {'error': 'Missing or empty available or obtained attributes in summary-marks'})
 
                     # Check if any mandatory fields have missing values
                     missing_values = [field for field in mandatory_fields if not element.find(field).text]
@@ -47,11 +62,16 @@ def validate_xml(xml_content):
 
         return not incomplete_records, incomplete_records
     except etree.XMLSyntaxError:
+        logger.error("Invalid XML syntax")
         return False, [{'error': 'Invalid XML syntax'}]
+
 
 @bp.route('/import', methods=['POST'])
 def import_results():
-    # Parse XML request and store data in database
+    """
+        Import test results from XML data into the database.
+        """
+
     # Check if the request contains XML data
     if request.content_type != 'text/xml+markr':
         return 'Unsupported Media Type', 415
@@ -67,6 +87,7 @@ def import_results():
         try:
             tree = etree.parse(BytesIO(xml_data))
         except etree.XMLSyntaxError:
+            logger.error("Invalid XML data")
             return 'Invalid XML data', 400
 
         # Extract student data from the XML
@@ -102,18 +123,27 @@ def import_results():
                                          scanned_on=scanned_on)
                 db.session.add(new_result)
 
-        # Commit changes to the database
-        db.session.commit()
+            # Commit changes to the database
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error committing changes to the database: {e}")
+            return 'Error committing changes to the database', 500
 
         return 'Results imported successfully', 200
 
     else:
+        logger.error("Incomplete record(s) in XML data")
         return jsonify({'error': 'Incomplete record(s)', 'incomplete_records': incomplete_records}), 400
-
 
 
 @bp.route('/results/<test_id>/aggregate', methods=['GET'])
 def aggregate_results(test_id):
+    """
+       Aggregate results for a given test ID.
+       """
+
     # Query the database to get marks obtained for the given test_id
     obtained_marks_list = [result.obtained_marks for result in TestResults.query.filter_by(test_id=test_id).all()]
 
